@@ -153,6 +153,35 @@ class TestSerialize:
         future["extra"] = np.linspace(20, 22, 5)
         m2.predict(future)
 
+    def test_serialize_numpy_scalar_arguments(self, daily_univariate_ts, backend):
+        # Settings read from numpy arrays or dataframe rows, e.g. after a
+        # hyperparameter search, arrive as numpy scalars
+        df = daily_univariate_ts.head(daily_univariate_ts.shape[0] - 30).copy()
+        df["extra"] = np.arange(df.shape[0]) % 7
+        m = Prophet(
+            n_changepoints=np.int64(10),
+            uncertainty_samples=np.int64(100),
+            stan_backend=backend,
+        )
+        m.add_seasonality(name="monthly", period=30.5, fourier_order=np.int64(5))
+        m.add_regressor("extra", prior_scale=np.int64(1))
+        m.fit(df)
+
+        m2 = model_from_json(model_to_json(m))
+
+        assert m2.n_changepoints == 10
+        assert m2.uncertainty_samples == 100
+        assert m2.seasonalities["monthly"]["fourier_order"] == 5
+        assert m2.extra_regressors["extra"]["prior_scale"] == 1
+        # serializing leaves the model's own settings as they were
+        assert isinstance(m.seasonalities["monthly"]["fourier_order"], np.int64)
+
+        future = m.make_future_dataframe(5)
+        future["extra"] = np.arange(future.shape[0]) % 7
+        fcst = m.predict(future)
+        fcst2 = m2.predict(future)
+        assert np.array_equal(fcst["yhat"].values, fcst2["yhat"].values)
+
     def test_backwards_compatibility(self):
         old_versions = {
             "0.6.1.dev0": (29.3669923968994, "fb"),
