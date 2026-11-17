@@ -15,6 +15,7 @@ from prophet.plot import (
     get_forecast_component_plotly_props,
     get_seasonality_plotly_props,
     plot_forecast_component,
+    plot_plotly,
     plot_seasonality,
     plot_weekly,
     plot_yearly,
@@ -201,3 +202,24 @@ class TestSeasonalityPlotData:
         traces = get_seasonality_plotly_props(m, "weekly")["traces"]
         np.testing.assert_array_equal(pd.to_datetime(traces[0].x), data["ds"])
         np.testing.assert_array_equal(traces[0].y, data["weekly"])
+
+
+class TestPlotPlotly:
+    def test_draws_forecast(self, model_and_forecast):
+        pytest.importorskip("plotly")
+        m, fcst = model_and_forecast
+        fig = plot_plotly(m, fcst)
+        traces = {trace.name: trace for trace in fig.data if trace.name}
+        np.testing.assert_array_equal(pd.to_datetime(traces["Actual"].x), m.history["ds"])
+        np.testing.assert_array_equal(traces["Actual"].y, m.history["y"])
+        np.testing.assert_array_equal(pd.to_datetime(traces["Predicted"].x), fcst["ds"])
+        np.testing.assert_array_equal(traces["Predicted"].y, fcst["yhat"])
+
+    def test_draws_trend_and_changepoints(self, model_and_forecast):
+        pytest.importorskip("plotly")
+        m, fcst = model_and_forecast
+        fig = plot_plotly(m, fcst, trend=True, changepoints=True, changepoints_threshold=0)
+        traces = {trace.name: trace for trace in fig.data if trace.name}
+        np.testing.assert_array_equal(traces["Trend"].y, fcst["trend"])
+        # With a zero threshold every changepoint is marked.
+        np.testing.assert_array_equal(pd.to_datetime(fig.data[-1].x), m.changepoints)
