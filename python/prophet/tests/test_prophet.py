@@ -1052,6 +1052,39 @@ class TestProphetRegressors:
             {"ds": pd.date_range("2020-01-01", periods=n, freq="D"), "y": y, "reg": reg, "y_clean": y_clean}
         )
 
+    @pytest.mark.parametrize("predictor_spec", [True, {}, {"uncertainty_samples": 0}])
+    def test_regressor_predictor_kwargs(self, backend, predictor_spec):
+        df = self._make_regressor_df().iloc[:20]
+        model = Prophet(
+            uncertainty_samples=0,
+            yearly_seasonality=False,
+            weekly_seasonality=False,
+            daily_seasonality=False,
+            stan_backend=backend,
+        )
+        model.add_regressor("reg", regressor_predictor=predictor_spec)
+        model.fit(df)
+
+        assert model.extra_regressors["reg"]["predictor"] is not None
+        future = pd.DataFrame({"ds": pd.date_range("2020-01-21", periods=2)})
+        forecast = model.predict(future)
+        assert len(forecast) == 2
+        assert np.isfinite(forecast["yhat"]).all()
+
+    @pytest.mark.parametrize("predictor_spec", [None, False])
+    def test_regressor_predictor_disabled(self, backend, predictor_spec):
+        model = Prophet(stan_backend=backend)
+        model.add_regressor("reg", regressor_predictor=predictor_spec)
+
+        assert model.extra_regressors["reg"]["predictor_spec"] is None
+
+    def test_regressor_predictor_invalid_kwargs(self, backend):
+        model = Prophet(stan_backend=backend)
+        model.add_regressor("reg", regressor_predictor={"invalid_keyword": True})
+
+        with pytest.raises(TypeError, match="invalid_keyword"):
+            model.fit(self._make_regressor_df().iloc[:20])
+
     def test_regressor_predictor_affects_predict_outputs(self, backend):
         df = self._make_regressor_df()
         train = df.iloc[:70]

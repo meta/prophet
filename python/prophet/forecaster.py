@@ -757,12 +757,11 @@ class Prophet:
         if mode not in ['additive', 'multiplicative']:
             raise ValueError("mode must be 'additive' or 'multiplicative'")
         predictor_spec = None
-        if regressor_predictor:
-            if isinstance(regressor_predictor, dict):
-                predictor_spec = deepcopy(regressor_predictor)
-            else:
-                # Truthy non-dict values (typically True) use default Prophet params.
-                predictor_spec = {}
+        if isinstance(regressor_predictor, dict):
+            predictor_spec = deepcopy(regressor_predictor)
+        elif regressor_predictor:
+            # Truthy non-dict values (typically True) use default Prophet params.
+            predictor_spec = {}
         self.extra_regressors[name] = {
             'prior_scale': prior_scale,
             'standardize': standardize,
