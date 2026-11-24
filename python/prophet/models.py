@@ -230,14 +230,22 @@ class CmdStanPyBackend(IStanBackend):
             fit_result: cmdstanpy.CmdStanMLE | cmdstanpy.CmdStanMCMC = self.stan_fit
             to_remove = []
 
-            for attr in fit_result._FILE_ATTRS:
-                val = getattr(fit_result, attr)
-                if val is None:
-                    continue
-                if isinstance(val, list):
-                    to_remove.extend(val)
-                else:
-                    to_remove.append(val)
+            if hasattr(fit_result, "runset"):  # 1.x
+                to_remove = [
+                    fit_result.runset.csv_files
+                    + fit_result.runset.diagnostic_files
+                    + fit_result.runset.stdout_files
+                    + fit_result.runset.profile_files
+                ]
+            else:  # 2.0
+                for attr in fit_result._FILE_ATTRS:
+                    val = getattr(fit_result, attr)
+                    if val is None:
+                        continue
+                    if isinstance(val, list):
+                        to_remove.extend(val)
+                    else:
+                        to_remove.append(val)
 
             for fpath in to_remove:
                 if pathlib.Path(fpath).is_file():
