@@ -1350,7 +1350,12 @@ class Prophet:
         history = df[df['y'].notnull()].copy()
         if history.shape[0] < 2:
             raise ValueError('Dataframe has less than 2 non-NaN rows.')
-        self.history_dates = pd.to_datetime(pd.Series(df['ds'].unique(), name='ds')).sort_values()
+        history_dates = pd.Series(df['ds'].unique(), name='ds')
+        if history_dates.dtype == np.int64:
+            # Parse integer dates like setup_dataframe does, so that they are
+            # not read as nanoseconds since 1970.
+            history_dates = history_dates.astype(str)
+        self.history_dates = pd.to_datetime(history_dates).sort_values()
 
         self.history = self.setup_dataframe(history, initialize_scales=True)
         self.set_auto_seasonalities()

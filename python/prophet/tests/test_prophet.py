@@ -272,6 +272,36 @@ class TestProphetDataPrep:
 
         assert len(future) == train.shape[0] + 3
 
+    def test_make_future_dataframe_integer_ds(self, daily_univariate_ts, backend):
+        # ds stored as integers like 20120521, as read from a csv of YYYYMMDD dates
+        train = daily_univariate_ts.head(468 // 2).copy()
+        train["ds"] = train["ds"].dt.strftime("%Y%m%d").astype("int64")
+        forecaster = Prophet(stan_backend=backend)
+        forecaster.fit(train)
+        # history_dates must hold the same dates that were used for fitting
+        assert forecaster.history_dates.min() == forecaster.history["ds"].min()
+        assert forecaster.history_dates.max() == forecaster.history["ds"].max()
+
+        future = forecaster.make_future_dataframe(periods=3, freq="D", include_history=False)
+        correct = pd.DatetimeIndex(["2013-04-26", "2013-04-27", "2013-04-28"])
+        assert len(future) == 3
+        assert np.all(future["ds"].values == correct.values)
+
+        future = forecaster.make_future_dataframe(periods=3, freq="D", include_history=True)
+        assert len(future) == train.shape[0] + 3
+        assert future["ds"].min() == pd.Timestamp("2012-05-18")
+        assert future["ds"].max() == pd.Timestamp("2013-04-28")
+
+    def test_make_future_dataframe_integer_year_ds(self, backend):
+        # Yearly data with ds given as integer years
+        train = pd.DataFrame({"ds": np.arange(2000, 2020, dtype="int64"), "y": np.arange(20.0)})
+        forecaster = Prophet(stan_backend=backend)
+        forecaster.fit(train)
+        future = forecaster.make_future_dataframe(periods=2, freq="YS", include_history=False)
+        correct = pd.DatetimeIndex(["2020-01-01", "2021-01-01"])
+        assert len(future) == 2
+        assert np.all(future["ds"].values == correct.values)
+
 class TestProphetTrendComponent:
     def test_invalid_growth_input(self, backend):
         msg = 'Parameter "growth" should be "linear", ' '"logistic" or "flat".'
