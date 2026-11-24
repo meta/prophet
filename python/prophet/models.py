@@ -232,13 +232,13 @@ class CmdStanPyBackend(IStanBackend):
 
             if hasattr(fit_result, "runset"):  # 1.x
                 to_remove = [
-                    fit_result.runset.csv_files
-                    + fit_result.runset.diagnostic_files
-                    + fit_result.runset.stdout_files
-                    + fit_result.runset.profile_files
+                    fit_result.runset.csv_files  # type: ignore
+                    + fit_result.runset.diagnostic_files  # type: ignore
+                    + fit_result.runset.stdout_files  # type: ignore
+                    + fit_result.runset.profile_files  # type: ignore
                 ]
             else:  # 2.0
-                for attr in fit_result._FILE_ATTRS:
+                for attr in fit_result._FILE_ATTRS:  # type: ignore
                     val = getattr(fit_result, attr)
                     if val is None:
                         continue
