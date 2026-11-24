@@ -86,8 +86,14 @@ def model_to_dict(model: Prophet) -> dict[str, Any]:
         if attribute == 'extra_regressors':
             cleaned = OrderedDict()
             for name, props in getattr(model, attribute).items():
-                props_copy = deepcopy(props)
-                props_copy['predictor'] = None
+                props_copy = deepcopy({
+                    k: v for k, v in props.items() if k != 'predictor'
+                })
+                predictor = props.get('predictor')
+                props_copy['predictor'] = (
+                    model_to_dict(predictor)
+                    if predictor is not None else None
+                )
                 cleaned[name] = props_copy
             model_dict[attribute] = [
                 list(cleaned.keys()),
@@ -196,6 +202,12 @@ def model_from_dict(model_dict: dict[str, Any]) -> Prophet:
         od = OrderedDict()
         for key in key_list:
             od[key] = unordered_dict[key]
+        if attribute == 'extra_regressors':
+            for name, props in od.items():
+                predictor = props.get('predictor')
+                if isinstance(predictor, dict):
+                    props['predictor'] = model_from_dict(predictor)
+                    props['predictor']._regressor_name = name
         setattr(model, attribute, od)
     # Other attributes with special handling
     # fit_kwargs
