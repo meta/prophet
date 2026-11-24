@@ -147,9 +147,18 @@ class TestSerialize:
 
         assert "extra" in m2.extra_regressors
         assert m2.extra_regressors["extra"]["predictor_spec"] == {}
-        assert m2.extra_regressors["extra"]["predictor"] is None
+        predictor = m2.extra_regressors["extra"]["predictor"]
+        assert predictor is not None
+        assert predictor._regressor_name == "extra"
 
+        # The deserialized model forecasts the regressor itself, like the
+        # original; no regressor column needs to be supplied.
         future = pd.DataFrame({"ds": pd.date_range("2020-02-20", periods=5, freq="D")})
+        fcst = m.predict(future)
+        fcst2 = m2.predict(future)
+        assert np.array_equal(fcst["yhat"].values, fcst2["yhat"].values)
+
+        # Supplying the regressor column explicitly still works.
         future["extra"] = np.linspace(20, 22, 5)
         m2.predict(future)
 
