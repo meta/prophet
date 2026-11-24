@@ -114,7 +114,19 @@ def model_to_dict(model: Prophet) -> dict[str, Any]:
     model_dict['params'] = {k: v.tolist() for k, v in model.params.items()}
     # Attributes that are skipped: stan_fit, stan_backend
     model_dict["__prophet_version"] = __version__
-    return model_dict
+    return _to_builtin_types(model_dict)
+
+
+def _to_builtin_types(value: Any) -> Any:
+    """Replace numpy scalars, e.g. an np.int64 passed as n_changepoints or as
+    a seasonality's fourier_order, with the Python types json can write."""
+    if isinstance(value, np.generic):
+        return value.item()
+    if isinstance(value, dict):
+        return type(value)((k, _to_builtin_types(v)) for k, v in value.items())
+    if isinstance(value, list):
+        return [_to_builtin_types(v) for v in value]
+    return value
 
 
 def model_to_json(model: Prophet) -> str:
