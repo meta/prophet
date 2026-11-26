@@ -761,7 +761,7 @@ def plot_plotly(
 
     data = []
     # Add actual
-    assert m.history
+    assert m.history is not None
     data.append(go.Scatter(
         name='Actual',
         x=m.history['ds'],
@@ -826,7 +826,7 @@ def plot_plotly(
             line=dict(color=trend_color, width=line_width),
         ))
     # Add changepoints
-    assert m.changepoints
+    assert m.changepoints is not None
     if changepoints and len(m.changepoints) > 0:
         signif_changepoints = m.changepoints[
             np.abs(np.nanmean(m.params['delta'], axis=0)) >= changepoints_threshold
